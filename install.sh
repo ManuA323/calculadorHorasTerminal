@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-REPO="https://raw.githubusercontent.com/TU_USUARIO/trabajo/main"
+REPO="https://raw.githubusercontent.com/ManuA323/calculadorHorasTerminal/main"
 
-echo "Descargando trabajo..."
+echo "Descargando calculador..."
 
 sudo curl -fsSL "$REPO/trabajo.awk" -o /usr/local/bin/trabajo
 sudo chmod +x /usr/local/bin/trabajo
