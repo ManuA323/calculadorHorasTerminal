@@ -44,12 +44,19 @@ function formatoHoras(min, h, m) {
     if (!(dia in dias))
         next
 
-    if ($10=="still") {
+    # Sistema actualmente encendido
+    if ($10=="still" || $11=="still") {
         fin="Actual"
         duracion=0
         activo=1
-    } else {
-        fin=substr($11,1,5)
+    }
+    else {
+        # En last -F:
+        # $11 = día fin
+        # $12 = mes fin
+        # $13 = día del mes fin
+        # $14 = hora fin
+        fin=substr($14,1,5)
 
         if (match($0, /\([0-9:]+\)/)) {
             tiempo=substr($0,RSTART+1,RLENGTH-2)
@@ -74,13 +81,13 @@ function formatoHoras(min, h, m) {
 
     } else {
 
-        # Si alguno de los intervalos sigue activo
+        # Si uno de los intervalos está activo
         if (activo || activoDia[clave]) {
             activoDia[clave]=1
             finDia[clave]="Actual"
         }
 
-        # Si hay intersección, unificar
+        # Intervalos superpuestos: unir
         if (finDia[clave]=="Actual" || inicio <= finDia[clave]) {
 
             if (inicio < inicioDia[clave])
@@ -89,9 +96,9 @@ function formatoHoras(min, h, m) {
             if (fin != "Actual" && fin > finDia[clave])
                 finDia[clave]=fin
 
-        } else {
-
-            # Si no hay intersección, sumar
+        }
+        else {
+            # Intervalos separados: sumar
             totalDia[clave]+=duracion
         }
     }
@@ -118,14 +125,16 @@ END {
             total="En curso"
             hasta="Actual"
 
-        } else {
+        }
+        else {
 
             hasta=finDia[clave]
 
+            minutosDia=totalDia[clave]
+
+            # Si quedó un único intervalo consolidado
             if (finDia[clave]!="Actual") {
                 minutosDia=minutos(finDia[clave])-minutos(inicioDia[clave])
-            } else {
-                minutosDia=totalDia[clave]
             }
 
             total=formatoHoras(minutosDia)
@@ -140,7 +149,6 @@ END {
             total
     }
 
-    if (totalSemana>0) {
+    if (totalSemana>0)
         printf "\nTOTAL SEMANAL: %s / 35:00\n", formatoHoras(totalSemana)
-    }
 }
