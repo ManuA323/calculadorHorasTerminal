@@ -98,7 +98,6 @@ function fechaClave(mes,dia) {
 }
 
 END {
-
     semanaActual=""
     totalSemana=0
 
@@ -112,18 +111,24 @@ END {
         mes=d[2]
         diaSemana=d[3]
 
-        semana=fecha
+        # Convertir fecha a semana ISO usando date
+        comando="date -d '" fecha " " mes " 2026' +%V"
+        comando | getline semana
+        close(comando)
 
-        if (semanaActual!="" && semana!=semanaActual) {
-            printf "\nTOTAL SEMANAL: %s / 35:00\n\n", formato(totalSemana)
-            totalSemana=0
+        if (semanaActual=="" ) {
+            semanaActual=semana
         }
 
-        semanaActual=semana
+        if (semana != semanaActual) {
+            printf "\nTOTAL SEMANAL: %s / 35:00\n\n", formato(totalSemana)
+            totalSemana=0
+            semanaActual=semana
+        }
 
         salida=dias[diaSemana]
 
-        fechaFormato=fechaClave(mes,fecha)
+        fechaFormato=sprintf("%02d/%s",fecha,meses[mes])
 
         if (activoDia[clave]) {
             total="En curso"
