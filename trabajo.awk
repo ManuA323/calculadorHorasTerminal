@@ -1,119 +1,199 @@
-#!/usr/bin/awk -f
-
 BEGIN {
-    dias["Mon"]="Lunes"
-    dias["Tue"]="Martes"
-    dias["Wed"]="Miercoles"
-    dias["Thu"]="Jueves"
-    dias["Fri"]="Viernes"
+    FS=" "
+
+    meses["01"]="01"
+    meses["02"]="02"
+    meses["03"]="03"
+    meses["04"]="04"
+    meses["05"]="05"
+    meses["06"]="06"
+    meses["07"]="07"
+    meses["08"]="08"
+    meses["09"]="09"
+    meses["10"]="10"
+    meses["11"]="11"
+    meses["12"]="12"
+
+    semana_actual=""
 }
 
-function minutos(h, a) {
-    split(h,a,":")
+function timestamp(line,   d,t) {
+    d=substr(line,1,10)
+    t=substr(line,12,5)
+    return d " " t
+}
+
+function minutos(hora,   a) {
+    split(hora,a,":")
     return a[1]*60+a[2]
 }
 
-function formato(m) {
-    return sprintf("%02d:%02d", int(m/60), m%60)
+function formato(min,   h,m) {
+    if(min<0)
+        return "00:00"
+
+    h=int(min/60)
+    m=min%60
+
+    return sprintf("%02d:%02d",h,m)
+}
+
+function diaSemana(fecha,   cmd,res) {
+    cmd="date -d " fecha " +%u"
+    cmd | getline res
+    close(cmd)
+    return res
+}
+
+function nombreDia(fecha,   cmd,res) {
+    cmd="date -d " fecha " +%A"
+    cmd | getline res
+    close(cmd)
+
+    return toupper(substr(res,1,1)) substr(res,2)
 }
 
 {
-    fecha=substr($1,1,10)
-    hora=substr($1,12,5)
+    fecha=substr($0,1,10)
+    hora=substr($0,12,5)
 
-    if ($0 ~ /New session 2 of user/) {
-        if (!(fecha in inicio) || hora < inicio[fecha])
+    # Solo días hábiles
+    dia=diaSemana(fecha)
+
+    if(dia>5)
+        next
+
+
+    # Inicio de sesión del usuario
+    if($0 ~ /New session [0-9]+ of user/) {
+
+        # ignorar gdm
+        if($0 !~ /user gdm/) {
+
+            if(inicio[fecha]=="")
+                inicio[fecha]=hora
+        }
+    }
+
+
+    # Retorno de suspensión
+    if($0 ~ /System returned from sleep operation/) {
+
+        if(inicio[fecha]=="")
             inicio[fecha]=hora
     }
 
-    if ($0 ~ /System is powering down/) {
+
+    # Fin por apagado
+    if($0 ~ /System is powering down/) {
+
+        fin[fecha]=hora
+    }
+
+
+    # Fin por suspensión
+    if($0 ~ /The system will suspend now/) {
+
         fin[fecha]=hora
     }
 }
 
+
 END {
-    n=0
 
-    for (d in inicio) {
-        split(d,f,"-")
+    # Fecha actual
+    cmd="date +%Y-%m-%d"
+    cmd | getline hoy
+    close(cmd)
 
-        cmd="date -d '" d "' +%u"
-        cmd | getline diaNum
+    if(inicio[hoy]!="" && fin[hoy]=="") {
+        fin[hoy]="EN CURSO"
+    }
+
+
+    # Últimos 14 días hábiles
+    cmd="date -d '14 days ago' +%Y-%m-%d"
+    cmd | getline desde
+    close(cmd)
+
+
+    totalSemana=0
+    semana=""
+
+    for(i=0;i<14;i++) {
+
+        cmd="date -d '" i " days ago' +%Y-%m-%d"
+        cmd | getline fecha
         close(cmd)
 
-        # solo lunes a viernes
-        if (diaNum>=6)
+
+        dia=diaSemana(fecha)
+
+        if(dia>5)
             continue
 
-        orden[++n]=d
-    }
 
-    # ordenar fechas descendente
-    for (i=1;i<=n;i++) {
-        for (j=i+1;j<=n;j++) {
-            if (orden[i] < orden[j]) {
-                tmp=orden[i]
-                orden[i]=orden[j]
-                orden[j]=tmp
-            }
+        if(inicio[fecha]=="") 
+            continue
+
+
+        nombre=nombreDia(fecha)
+
+
+        if(fin[fecha]=="EN CURSO") {
+
+            cmd="date +%H:%M"
+            cmd | getline ahora
+            close(cmd)
+
+            total=minutos(ahora)-minutos(inicio[fecha])
+
+        } else {
+
+            total=minutos(fin[fecha])-minutos(inicio[fecha])
         }
-    }
 
-    semanaActual=""
-    totalSemana=0
 
-    for (i=1;i<=n;i++) {
+        if(total<0)
+            total=0
 
-        d=orden[i]
 
-        cmd="date -d '" d "' +%V"
-        cmd | getline semana
+        # Cambio de semana
+        cmd="date -d '" fecha "' +%G-%V"
+        cmd | getline semanaFecha
         close(cmd)
 
-        if (semanaActual=="")
-            semanaActual=semana
 
-        if (semana != semanaActual) {
-            printf "\nTOTAL SEMANAL: %s / 35:00 hs\n\n", formato(totalSemana)
+        if(semana!="" && semanaFecha!=semana) {
+
+            print ""
+            print "TOTAL SEMANAL: " formato(totalSemana) " / 35:00 hs"
+            print ""
+
             totalSemana=0
-            semanaActual=semana
         }
 
-        cmd="date -d '" d "' +%a"
-        cmd | getline dia
-        close(cmd)
 
-        diaTexto=dias[dia]
-
-        if (d in fin) {
-            finTexto=fin[d]
-
-            totalMin=minutos(fin[d])-minutos(inicio[d])
-
-            if (totalMin<0)
-                totalMin=0
-        }
-        else {
-            finTexto="Actual"
-
-            ahora=strftime("%H:%M")
-            totalMin=minutos(ahora)-minutos(inicio[d])
-
-            if (totalMin<0)
-                totalMin=0
+        if(semanaFecha!=semana) {
+            semana=semanaFecha
         }
 
-        total=formato(totalMin)
-        totalSemana+=totalMin
 
         printf "%-10s %s: Inicio: %s  Fin: %s  Total Diario: %s\n",
-            diaTexto,
-            d,
-            inicio[d],
-            finTexto,
-            total
+            nombre,
+            fecha,
+            inicio[fecha],
+            fin[fecha],
+            formato(total)
+
+
+        totalSemana+=total
     }
 
-    if (totalSemana>0)
-        printf "\nTOTAL SEMANAL: %s / 35:00 hs\n", formato(totalSemana)
+
+    if(totalSemana>0) {
+
+        print ""
+        print "TOTAL SEMANAL: " formato(totalSemana) " / 35:00 hs"
+    }
 }
