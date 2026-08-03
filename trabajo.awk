@@ -7,33 +7,37 @@ BEGIN {
     dias["Thu"]="Jueves"
     dias["Fri"]="Viernes"
 
-    meses["Jan"]="1"
-    meses["Feb"]="2"
-    meses["Mar"]="3"
-    meses["Apr"]="4"
-    meses["May"]="5"
-    meses["Jun"]="6"
-    meses["Jul"]="7"
-    meses["Aug"]="8"
-    meses["Sep"]="9"
+    meses["Jan"]="01"
+    meses["Feb"]="02"
+    meses["Mar"]="03"
+    meses["Apr"]="04"
+    meses["May"]="05"
+    meses["Jun"]="06"
+    meses["Jul"]="07"
+    meses["Aug"]="08"
+    meses["Sep"]="09"
     meses["Oct"]="10"
     meses["Nov"]="11"
     meses["Dec"]="12"
 }
 
-function minutos(hora,    a) {
+function minutos(hora, a) {
     split(hora,a,":")
     return a[1]*60+a[2]
 }
 
-function formato_horas(min,    h,m) {
+function formato(min, h,m) {
     h=int(min/60)
     m=min%60
     return sprintf("%02d:%02d",h,m)
 }
 
+function fechaClave(mes,dia) {
+    return sprintf("%02d/%s", dia, meses[mes])
+}
+
 {
-    if ($1 != "reboot")
+    if ($1!="reboot")
         next
 
     dia=$5
@@ -47,24 +51,24 @@ function formato_horas(min,    h,m) {
 
     if ($10=="still") {
         fin="Actual"
-        duracion=0
         activo=1
-    } else {
+        duracion=0
+    }
+    else {
         fin=substr($11,1,5)
 
-        # Extraer duración sin usar match con array
-        duracionTexto=$(NF-0)
+        duracionTexto=$NF
         gsub(/[()]/,"",duracionTexto)
 
         split(duracionTexto,t,":")
-        if (length(t)!=2)
+        if (t[1]=="" || t[2]=="")
             next
 
         duracion=t[1]*60+t[2]
         activo=0
     }
 
-    clave=dia"_"mes"_"fecha
+    clave=fecha"_"mes"_"dia
 
     if (!(clave in inicioDia)) {
         inicioDia[clave]=inicio
@@ -74,25 +78,20 @@ function formato_horas(min,    h,m) {
         orden[++cantidad]=clave
     }
     else {
+        # unir intervalos superpuestos
+        if (finDia[clave]=="Actual" || inicio<=finDia[clave]) {
 
-        # Si uno de los intervalos sigue activo
-        if (activo || activoDia[clave]) {
-            activoDia[clave]=1
-            finDia[clave]="Actual"
-        }
-
-        # Unificar intervalos si se pisan
-        if (finDia[clave]=="Actual" || minutos(inicio)<=minutos(finDia[clave])) {
-
-            if (minutos(inicio)<minutos(inicioDia[clave]))
+            if (inicio < inicioDia[clave])
                 inicioDia[clave]=inicio
 
-            if (fin!="Actual" && (finDia[clave]=="Actual" || minutos(fin)>minutos(finDia[clave])))
+            if (fin!="Actual" && (finDia[clave]=="Actual" || fin>finDia[clave]))
                 finDia[clave]=fin
 
+            if (activo)
+                activoDia[clave]=1
         }
         else {
-            # Intervalos separados: sumar horas
+            # intervalos separados
             totalDia[clave]+=duracion
         }
     }
@@ -100,8 +99,8 @@ function formato_horas(min,    h,m) {
 
 END {
 
+    semanaActual=""
     totalSemana=0
-    ultimaSemana=""
 
     for (i=1;i<=cantidad;i++) {
 
@@ -109,15 +108,26 @@ END {
 
         split(clave,d,"_")
 
-        dia=d[1]
+        fecha=d[1]
         mes=d[2]
-        fecha=d[3]
+        diaSemana=d[3]
 
-        fechaFormato=sprintf("%02d/%s",fecha,meses[mes])
+        semana=fecha
+
+        if (semanaActual!="" && semana!=semanaActual) {
+            printf "\nTOTAL SEMANAL: %s / 35:00\n\n", formato(totalSemana)
+            totalSemana=0
+        }
+
+        semanaActual=semana
+
+        salida=dias[diaSemana]
+
+        fechaFormato=fechaClave(mes,fecha)
 
         if (activoDia[clave]) {
-            hasta="Actual"
             total="En curso"
+            hasta="Actual"
         }
         else {
             hasta=finDia[clave]
@@ -127,12 +137,12 @@ END {
             if (totalMin<0)
                 totalMin=totalDia[clave]
 
-            total=formato_horas(totalMin)
+            total=formato(totalMin)
             totalSemana+=totalMin
         }
 
         printf "%-10s %s: Desde: %s  Hasta: %s  (Total: %s)\n",
-            dias[dia],
+            salida,
             fechaFormato,
             inicioDia[clave],
             hasta,
@@ -140,5 +150,5 @@ END {
     }
 
     if (totalSemana>0)
-        printf "\nTOTAL SEMANAL: %s / 35:00\n", formato_horas(totalSemana)
+        printf "\nTOTAL SEMANAL: %s / 35:00\n", formato(totalSemana)
 }
