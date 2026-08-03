@@ -6,6 +6,8 @@ BEGIN {
     dias["Wed"]="Miércoles"
     dias["Thu"]="Jueves"
     dias["Fri"]="Viernes"
+    dias["Sat"]="Sábado"
+    dias["Sun"]="Domingo"
 
     meses["Jan"]="01"
     meses["Feb"]="02"
@@ -27,40 +29,49 @@ function minutos(hora, a) {
 }
 
 function formato(min, h,m) {
+    if (min < 0)
+        min=0
+
     h=int(min/60)
     m=min%60
+
     return sprintf("%02d:%02d",h,m)
 }
 
-function fechaClave(mes,dia) {
-    return sprintf("%02d/%s", dia, meses[mes])
+function obtenerSemana(fecha, mes, año, comando, semana) {
+    comando="date -d '" fecha " " mes " " año "' +%V"
+    comando | getline semana
+    close(comando)
+    return semana
 }
 
 {
     if ($1!="reboot")
         next
 
-    dia=$5
+    diaSemana=$5
     mes=$6
     fecha=$7
+    año=$8
 
-    if (!(dia in dias))
+    if (!(diaSemana in dias))
         next
 
-    inicio=substr($8,1,5)
+    inicio=substr($9,1,5)
 
-    if ($10=="still") {
+    if ($11=="still") {
         fin="Actual"
         activo=1
         duracion=0
     }
     else {
-        fin=substr($11,1,5)
+        fin=substr($12,1,5)
 
         duracionTexto=$NF
         gsub(/[()]/,"",duracionTexto)
 
         split(duracionTexto,t,":")
+
         if (t[1]=="" || t[2]=="")
             next
 
@@ -68,73 +79,100 @@ function fechaClave(mes,dia) {
         activo=0
     }
 
-    clave=fecha"_"mes"_"dia
+    clave=año"_"mes"_"fecha
 
     if (!(clave in inicioDia)) {
         inicioDia[clave]=inicio
         finDia[clave]=fin
         totalDia[clave]=duracion
         activoDia[clave]=activo
-        orden[++cantidad]=clave
+
+        añoDia[clave]=año
+        mesDia[clave]=mes
+        fechaDia[clave]=fecha
+        diaSemanaDia[clave]=diaSemana
+
+        cantidad++
+        orden[cantidad]=clave
     }
     else {
-        # unir intervalos superpuestos
-        if (finDia[clave]=="Actual" || inicio<=finDia[clave]) {
 
-            if (inicio < inicioDia[clave])
-                inicioDia[clave]=inicio
-
-            if (fin!="Actual" && (finDia[clave]=="Actual" || fin>finDia[clave]))
-                finDia[clave]=fin
-
-            if (activo)
-                activoDia[clave]=1
+        if (activoDia[clave] || activo) {
+            activoDia[clave]=1
+            finDia[clave]="Actual"
         }
-        else {
-            # intervalos separados
-            totalDia[clave]+=duracion
-        }
+
+        if (inicio < inicioDia[clave])
+            inicioDia[clave]=inicio
+
+        if (fin!="Actual" && finDia[clave]!="Actual" && fin > finDia[clave])
+            finDia[clave]=fin
+
     }
 }
 
 END {
+
+    # ordenar cronológicamente
+    for (i=1;i<=cantidad;i++) {
+
+        for (j=i+1;j<=cantidad;j++) {
+
+            f1=añoDia[orden[i]] mesDia[orden[i]] sprintf("%02d",fechaDia[orden[i]])
+            f2=añoDia[orden[j]] mesDia[orden[j]] sprintf("%02d",fechaDia[orden[j]])
+
+            if (f1 > f2) {
+                tmp=orden[i]
+                orden[i]=orden[j]
+                orden[j]=tmp
+            }
+        }
+    }
+
+
     semanaActual=""
     totalSemana=0
+
 
     for (i=1;i<=cantidad;i++) {
 
         clave=orden[i]
 
-        split(clave,d,"_")
+        semana=obtenerSemana(
+            fechaDia[clave],
+            mesDia[clave],
+            añoDia[clave]
+        )
 
-        fecha=d[1]
-        mes=d[2]
-        diaSemana=d[3]
 
-        # Convertir fecha a semana ISO usando date
-        comando="date -d '" fecha " " mes " 2026' +%V"
-        comando | getline semana
-        close(comando)
+        if (semanaActual!="" && semana!=semanaActual) {
 
-        if (semanaActual=="" ) {
-            semanaActual=semana
-        }
-
-        if (semana != semanaActual) {
             printf "\nTOTAL SEMANAL: %s / 35:00\n\n", formato(totalSemana)
+
             totalSemana=0
-            semanaActual=semana
         }
 
-        salida=dias[diaSemana]
 
-        fechaFormato=sprintf("%02d/%s",fecha,meses[mes])
+        semanaActual=semana
+
+
+        salida=dias[diaSemanaDia[clave]]
+
+        fechaFormato=sprintf(
+            "%02d/%s",
+            fechaDia[clave],
+            meses[mesDia[clave]]
+        )
+
 
         if (activoDia[clave]) {
+
             total="En curso"
             hasta="Actual"
+
         }
         else {
+
             hasta=finDia[clave]
 
             totalMin=minutos(finDia[clave])-minutos(inicioDia[clave])
@@ -143,8 +181,10 @@ END {
                 totalMin=totalDia[clave]
 
             total=formato(totalMin)
+
             totalSemana+=totalMin
         }
+
 
         printf "%-10s %s: Desde: %s  Hasta: %s  (Total: %s)\n",
             salida,
@@ -154,6 +194,7 @@ END {
             total
     }
 
-    if (totalSemana>0)
+
+    if (cantidad>0)
         printf "\nTOTAL SEMANAL: %s / 35:00\n", formato(totalSemana)
 }
