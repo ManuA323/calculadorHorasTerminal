@@ -18,19 +18,19 @@ Detecta:
 ## Instalacion
 
 Ejecutar:
-
+```console
 curl -fsSL https://raw.githubusercontent.com/ManuA323/calculadorHorasTerminal/main/install.sh | bash
-
+```
 
 ## Uso
 
 Luego:
-
+```console
 horas
-
+```
 
 ## Desinstalar
-
+```console
 Ejecutar:
-
+```
 ./uninstall.sh
