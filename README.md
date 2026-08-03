@@ -1,18 +1,36 @@
-# Calculador de horas Linux
+# Calculador de horas terminal
 
-Calcula horas trabajadas usando systemd journal.
+Calcula horas trabajadas usando eventos reales del sistema Linux.
 
-Características:
+Utiliza:
 
-- No depende de apagados.
-- Soporta suspensión.
-- Soporta múltiples boots.
-- Calcula últimas 2 semanas.
-- Ignora fines de semana.
+- journalctl
+- systemd-sleep
+- systemd-logind
 
-## Instalación
+Detecta:
+
+- inicio del sistema
+- suspensiones
+- reanudaciones
+- apagados
+
+## Instalacion
 
 Ejecutar:
 
-```bash
 curl -fsSL https://raw.githubusercontent.com/ManuA323/calculadorHorasTerminal/main/install.sh | bash
+
+
+## Uso
+
+Luego:
+
+horas
+
+
+## Desinstalar
+
+Ejecutar:
+
+./uninstall.sh
