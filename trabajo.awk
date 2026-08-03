@@ -8,155 +8,112 @@ BEGIN {
     dias["Fri"]="Viernes"
 }
 
-function minutos(hora) {
-    split(hora,a,":")
+function minutos(h, a) {
+    split(h,a,":")
     return a[1]*60+a[2]
 }
 
-function formato(min) {
-    return sprintf("%02d:%02d", int(min/60), min%60)
-}
-
-function diaSemana(fecha, cmd, resultado) {
-    cmd = "date -d " fecha " +%u"
-    cmd | getline resultado
-    close(cmd)
-    return resultado
-}
-
-function semanaISO(fecha, cmd, resultado) {
-    cmd = "date -d " fecha " +%V"
-    cmd | getline resultado
-    close(cmd)
-    return resultado
+function formato(m) {
+    return sprintf("%02d:%02d", int(m/60), m%60)
 }
 
 {
     fecha=substr($1,1,10)
     hora=substr($1,12,5)
 
-    # Ignorar otras sesiones y quedarse con el usuario real
-    if ($0 ~ "New session" && $0 ~ ("of user " usuario)) {
-
-        if (!(fecha in inicio)) {
+    if ($0 ~ /New session 2 of user/) {
+        if (!(fecha in inicio) || hora < inicio[fecha])
             inicio[fecha]=hora
-        }
-
-        next
     }
 
-
-    # Apagado
     if ($0 ~ /System is powering down/) {
-
         fin[fecha]=hora
-        next
-    }
-
-
-    # Entrada a suspension
-    if ($0 ~ /Performing sleep operation/) {
-
-        fin[fecha]=hora
-        next
-    }
-
-
-    # Vuelta de suspension
-    if ($0 ~ /System returned from sleep/) {
-
-        if (!(fecha in inicio)) {
-            inicio[fecha]=hora
-        }
-
-        next
     }
 }
 
 END {
+    n=0
 
-    cantidad=0
+    for (d in inicio) {
+        split(d,f,"-")
 
-    for (f in inicio) {
+        cmd="date -d '" d "' +%u"
+        cmd | getline diaNum
+        close(cmd)
 
-        if (!(f in fin))
+        # solo lunes a viernes
+        if (diaNum>=6)
             continue
 
-        cantidad++
-        fechas[cantidad]=f
+        orden[++n]=d
     }
 
-
-    # ordenar fechas ascendente
-    for(i=1;i<=cantidad;i++) {
-        for(j=i+1;j<=cantidad;j++) {
-
-            if(fechas[i] > fechas[j]) {
-
-                tmp=fechas[i]
-                fechas[i]=fechas[j]
-                fechas[j]=tmp
+    # ordenar fechas descendente
+    for (i=1;i<=n;i++) {
+        for (j=i+1;j<=n;j++) {
+            if (orden[i] < orden[j]) {
+                tmp=orden[i]
+                orden[i]=orden[j]
+                orden[j]=tmp
             }
         }
     }
 
-
     semanaActual=""
-
     totalSemana=0
 
+    for (i=1;i<=n;i++) {
 
-    # mostrar semanas de la mas nueva hacia atras
-    for(i=cantidad;i>=1;i--) {
+        d=orden[i]
 
-        fecha=fechas[i]
+        cmd="date -d '" d "' +%V"
+        cmd | getline semana
+        close(cmd)
 
-        sem=semanaISO(fecha)
+        if (semanaActual=="")
+            semanaActual=semana
 
-
-        if(semanaActual=="") {
-            semanaActual=sem
-        }
-
-
-        if(sem != semanaActual) {
-
+        if (semana != semanaActual) {
             printf "\nTOTAL SEMANAL: %s / 35:00 hs\n\n", formato(totalSemana)
-
             totalSemana=0
-            semanaActual=sem
+            semanaActual=semana
         }
 
+        cmd="date -d '" d "' +%a"
+        cmd | getline dia
+        close(cmd)
 
-        totalDia=minutos(fin[fecha])-minutos(inicio[fecha])
+        diaTexto=dias[dia]
 
-        if(totalDia<0)
-            totalDia=0
+        if (d in fin) {
+            finTexto=fin[d]
 
+            totalMin=minutos(fin[d])-minutos(inicio[d])
 
-        totalSemana+=totalDia
+            if (totalMin<0)
+                totalMin=0
+        }
+        else {
+            finTexto="Actual"
 
+            ahora=strftime("%H:%M")
+            totalMin=minutos(ahora)-minutos(inicio[d])
 
-        d=diaSemana(fecha)
+            if (totalMin<0)
+                totalMin=0
+        }
 
-        nombre=""
-
-        if(d=="1") nombre="Lunes"
-        if(d=="2") nombre="Martes"
-        if(d=="3") nombre="Miercoles"
-        if(d=="4") nombre="Jueves"
-        if(d=="5") nombre="Viernes"
-
+        total=formato(totalMin)
+        totalSemana+=totalMin
 
         printf "%-10s %s: Inicio: %s  Fin: %s  Total Diario: %s\n",
-            nombre,
-            fecha,
-            inicio[fecha],
-            fin[fecha],
-            formato(totalDia)
+            diaTexto,
+            d,
+            inicio[d],
+            finTexto,
+            total
     }
 
-
-    if(totalSemana>0)
+    if (totalSemana>0)
         printf "\nTOTAL SEMANAL: %s / 35:00 hs\n", formato(totalSemana)
 }
