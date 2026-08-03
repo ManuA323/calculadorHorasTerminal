@@ -30,7 +30,8 @@ horas
 ```
 
 ## Desinstalar
-```console
 Ejecutar:
-```
+```console
 ./uninstall.sh
+```
+
