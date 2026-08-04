@@ -11,6 +11,15 @@ function minutos(h) {
 function formato(t) {
     return sprintf("%02d:%02d", int(t/60), t%60)
 }
+function sumar7hs(hora) {
+    split(hora,a,":")
+    m=a[1]*60+a[2]+420
+
+    while (m>=1440)
+        m-=1440
+
+    return sprintf("%02d:%02d", int(m/60), m%60)
+}
 
 function nombre_dia(n) {
     if (n==1) return "Lunes"
@@ -64,7 +73,7 @@ function imprimir_semana(titulo, lunes, cual) {
 
         dia=nombre_dia(i)
 
-        if ((fecha in inicio) && (fecha in fin)) {
+                if ((fecha in inicio) && (fecha in fin)) {
 
             tiempo=minutos(fin[fecha])-minutos(inicio[fecha])
 
@@ -79,9 +88,15 @@ function imprimir_semana(titulo, lunes, cual) {
                 inicio[fecha],
                 fin[fecha],
                 formato(tiempo)
-
-        } else {
-
+        }
+        else if ((fecha in inicio) && fecha==hoy) {
+            printf "%-9s %s: Inicio: %s  Fin esperado: %s  Total Diario: 00:00\n",
+                dia,
+                fecha,
+                inicio[fecha],
+                sumar7hs(inicio[fecha])
+        }
+        else {
             printf "%-9s %s: Sin registro Total Diario: 00:00\n",
                 dia,
                 fecha
