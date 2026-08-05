@@ -34,35 +34,37 @@ function nombre_dia(n) {
     if (n==5) return "Viernes"
 }
 
+# ConvierteYYYY-MM-DD a timestamp Unix
+function fecha_a_timestamp(f) {
+    split(f, a, "-")
+    return mktime(a[1] " " a[2] " " a[3] " 12 00 00")
+}
+
+# Convierte timestamp Unix a YYYY-MM-DD
+function timestamp_a_fecha(ts) {
+    return strftime("%Y-%m-%d", ts)
+}
+
 function siguiente_fecha(fecha) {
-    cmd="date -d \"" fecha " +1 day\" +%Y-%m-%d"
-    cmd | getline r
-    close(cmd)
-    return r
+    ts = fecha_a_timestamp(fecha)
+    return timestamp_a_fecha(ts + 86400)
 }
 
 function anterior_fecha(fecha) {
-    cmd="date -d \"" fecha " -1 day\" +%Y-%m-%d"
-    cmd | getline dia
-    close(cmd)
-    return r
+    ts = fecha_a_timestamp(fecha)
+    return timestamp_a_fecha(ts - 86400)
 }
 
 function semana_lunes(fecha) {
-    cmd="date -d \"" fecha "\" +%u"
-    cmd | getline dia
-    close(cmd)
-
-    r=fecha
-
-    while (dia != 1) {
-        r=anterior_fecha(r)
-        cmd="date -d \"" r "\" +%u"
-        cmd | getline dia
-        close(cmd)
+    ts = fecha_a_timestamp(fecha)
+    # %u da el día de la semana (1 para Lunes, 7 para Domingo)
+    dia_num = strftime("%u", ts) + 0
+    
+    while (dia_num != 1) {
+        ts -= 86400
+        dia_num = strftime("%u", ts) + 0
     }
-
-    return r
+    return strftime("%Y-%m-%d", ts)
 }
 
 function imprimir_semana(titulo, lunes, cual) {
@@ -80,13 +82,13 @@ function imprimir_semana(titulo, lunes, cual) {
         dia=nombre_dia(i)
 
         if (fecha > hoy) {
-            # Días futuros: no se contabilizan ni tienen deuda
+            # Días futuros: no se contabilizan ni suman deuda
             printf "%-9s %s: Sin registro Total Diario: 00:00\n",
                 dia,
                 fecha
         }
         else if (fecha == hoy && (fecha in inicio)) {
-            # Día actual en curso: muestra progreso pero NO acumula deuda semanal
+            # Día actual en curso: calcula total acumulado pero NO suma deuda semanal
             tiempo = minutos(hora_actual) - minutos(inicio[fecha])
             if (tiempo < 0) tiempo = 0
 
@@ -156,7 +158,6 @@ function imprimir_semana(titulo, lunes, cual) {
     hora=substr($1,12,5)
     linea=$0
 
-
     activo=0
 
     if (linea ~ /New session [0-9]+ of user/)
@@ -171,13 +172,10 @@ function imprimir_semana(titulo, lunes, cual) {
     if (linea ~ /PM: suspend exit/)
         activo=1
 
-
     if (activo==1) {
-
         if (!(fecha in inicio))
             inicio[fecha]=hora
     }
-
 
     desactivo=0
 
@@ -199,7 +197,6 @@ function imprimir_semana(titulo, lunes, cual) {
     if (linea ~ /hibernate/)
         desactivo=1
 
-
     if (desactivo==1)
         fin[fecha]=hora
 }
@@ -207,25 +204,14 @@ function imprimir_semana(titulo, lunes, cual) {
 
 END {
 
-    cmd="date +%Y-%m-%d"
-    cmd | getline hoy
-    close(cmd)
-
-    cmd="date +%H:%M"
-    cmd | getline hora_actual
-    close(cmd)
-
+    hoy = strftime("%Y-%m-%d")
+    hora_actual = strftime("%H:%M")
 
     lunes_actual=semana_lunes(hoy)
 
-    lunes_anterior=anterior_fecha(lunes_actual)
-    lunes_anterior=anterior_fecha(lunes_anterior)
-    lunes_anterior=anterior_fecha(lunes_anterior)
-    lunes_anterior=anterior_fecha(lunes_anterior)
-    lunes_anterior=anterior_fecha(lunes_anterior)
-    lunes_anterior=anterior_fecha(lunes_anterior)
-    lunes_anterior=anterior_fecha(lunes_anterior)
-
+    # Restar 7 días (7 * 86400 segundos) para ir exactamente a la semana anterior
+    ts_lunes_anterior = fecha_a_timestamp(lunes_actual) - (7 * 86400)
+    lunes_anterior = timestamp_a_fecha(ts_lunes_anterior)
 
     imprimir_semana("SEMANA ANTERIOR", lunes_anterior, 2)
 
