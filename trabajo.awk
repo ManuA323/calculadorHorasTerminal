@@ -34,7 +34,6 @@ function nombre_dia(n) {
     if (n==5) return "Viernes"
 }
 
-# Convierte YYYY-MM-DD a timestamp Unix en formato compatible con mktime
 function fecha_a_timestamp(f) {
     split(f, a, "-")
     return mktime(sprintf("%04d %02d %02d 12 00 00", a[1], a[2], a[3]))
@@ -75,13 +74,13 @@ function imprimir_semana(titulo, lunes, cual) {
         dia = nombre_dia(i)
 
         if (fecha > hoy) {
-            # Días futuros: no se contabilizan ni generan deuda
+            # Días futuros: no contabilizan ni generan deuda
             printf "%-9s %s: Sin registro Total Diario: 00:00\n",
                 dia,
                 fecha
         }
         else if (fecha == hoy && (fecha in inicio)) {
-            # Día actual en curso: calcula total con la hora actual pero NO suma a deuda semanal
+            # Día actual en curso: calcula total acumulado pero NO suma a deuda semanal
             tiempo = minutos(hora_actual) - minutos(inicio[fecha])
             if (tiempo < 0) tiempo = 0
 
@@ -101,12 +100,15 @@ function imprimir_semana(titulo, lunes, cual) {
 
             total += tiempo
             
-            cadena_deuda = ""
+            cadena_saldo = ""
             if (fecha < hoy) {
                 deuda_dia = 420 - tiempo
+                deuda_semanal += deuda_dia  # Suma si faltaron horas, resta si hubo haber (horas extra)
+
                 if (deuda_dia > 0) {
-                    deuda_semanal += deuda_dia
-                    cadena_deuda = sprintf("  Deuda diaria: %s", formato(deuda_dia))
+                    cadena_saldo = sprintf("  Deuda diaria: %s", formato(deuda_dia))
+                } else if (deuda_dia < 0) {
+                    cadena_saldo = sprintf("  Haber diario: %s", formato(-deuda_dia))
                 }
             }
 
@@ -116,20 +118,20 @@ function imprimir_semana(titulo, lunes, cual) {
                 inicio[fecha],
                 fin[fecha],
                 formato(tiempo),
-                cadena_deuda
+                cadena_saldo
         }
         else {
             # Día pasado sin registro
-            cadena_deuda = ""
+            cadena_saldo = ""
             if (fecha < hoy) {
                 deuda_semanal += 420
-                cadena_deuda = sprintf("  Deuda diaria: %s", formato(420))
+                cadena_saldo = sprintf("  Deuda diaria: %s", formato(420))
             }
 
             printf "%-9s %s: Sin registro Total Diario: 00:00%s\n",
                 dia,
                 fecha,
-                cadena_deuda
+                cadena_saldo
         }
 
         fecha = siguiente_fecha(fecha)
