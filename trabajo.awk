@@ -4,8 +4,8 @@ BEGIN {
 }
 
 function minutos(h) {
-    split(h,a,":")
-    return a[1]*60+a[2]
+    split(h, a, ":")
+    return a[1]*60 + a[2]
 }
 
 function formato(t) {
@@ -17,11 +17,11 @@ function formato(t) {
 }
 
 function sumar7hs(hora) {
-    split(hora,a,":")
-    m=a[1]*60+a[2]+420
+    split(hora, a, ":")
+    m = a[1]*60 + a[2] + 420
 
-    while (m>=1440)
-        m-=1440
+    while (m >= 1440)
+        m -= 1440
 
     return sprintf("%02d:%02d", int(m/60), m%60)
 }
@@ -34,13 +34,12 @@ function nombre_dia(n) {
     if (n==5) return "Viernes"
 }
 
-# ConvierteYYYY-MM-DD a timestamp Unix
+# Convierte YYYY-MM-DD a timestamp Unix en formato compatible con mktime
 function fecha_a_timestamp(f) {
     split(f, a, "-")
-    return mktime(a[1] " " a[2] " " a[3] " 12 00 00")
+    return mktime(sprintf("%04d %02d %02d 12 00 00", a[1], a[2], a[3]))
 }
 
-# Convierte timestamp Unix a YYYY-MM-DD
 function timestamp_a_fecha(ts) {
     return strftime("%Y-%m-%d", ts)
 }
@@ -50,14 +49,8 @@ function siguiente_fecha(fecha) {
     return timestamp_a_fecha(ts + 86400)
 }
 
-function anterior_fecha(fecha) {
-    ts = fecha_a_timestamp(fecha)
-    return timestamp_a_fecha(ts - 86400)
-}
-
 function semana_lunes(fecha) {
     ts = fecha_a_timestamp(fecha)
-    # %u da el día de la semana (1 para Lunes, 7 para Domingo)
     dia_num = strftime("%u", ts) + 0
     
     while (dia_num != 1) {
@@ -73,22 +66,22 @@ function imprimir_semana(titulo, lunes, cual) {
     print titulo
     print ""
 
-    fecha=lunes
-    total=0
-    deuda_semanal=0
+    fecha = lunes
+    total = 0
+    deuda_semanal = 0
 
-    for (i=1;i<=5;i++) {
+    for (i=1; i<=5; i++) {
 
-        dia=nombre_dia(i)
+        dia = nombre_dia(i)
 
         if (fecha > hoy) {
-            # Días futuros: no se contabilizan ni suman deuda
+            # Días futuros: no se contabilizan ni generan deuda
             printf "%-9s %s: Sin registro Total Diario: 00:00\n",
                 dia,
                 fecha
         }
         else if (fecha == hoy && (fecha in inicio)) {
-            # Día actual en curso: calcula total acumulado pero NO suma deuda semanal
+            # Día actual en curso: calcula total con la hora actual pero NO suma a deuda semanal
             tiempo = minutos(hora_actual) - minutos(inicio[fecha])
             if (tiempo < 0) tiempo = 0
 
@@ -139,81 +132,76 @@ function imprimir_semana(titulo, lunes, cual) {
                 cadena_deuda
         }
 
-        fecha=siguiente_fecha(fecha)
+        fecha = siguiente_fecha(fecha)
     }
 
     if (cual==1)
-        total_actual=total
+        total_actual = total
 
     if (cual==2)
-        total_anterior=total
+        total_anterior = total
 
     printf "\nTOTAL SEMANAL: %s / 35:00 hs\n", formato(total)
     printf "DEUDA DE HORAS SEMANAL: %s\n", formato(deuda_semanal)
 }
 
-
 {
-    fecha=substr($1,1,10)
-    hora=substr($1,12,5)
-    linea=$0
+    fecha = substr($1, 1, 10)
+    hora = substr($1, 12, 5)
+    linea = $0
 
-    activo=0
+    activo = 0
 
     if (linea ~ /New session [0-9]+ of user/)
-        activo=1
+        activo = 1
 
     if (linea ~ /Waking up from system sleep/)
-        activo=1
+        activo = 1
 
     if (linea ~ /System returned from sleep operation/)
-        activo=1
+        activo = 1
 
     if (linea ~ /PM: suspend exit/)
-        activo=1
+        activo = 1
 
-    if (activo==1) {
+    if (activo == 1) {
         if (!(fecha in inicio))
-            inicio[fecha]=hora
+            inicio[fecha] = hora
     }
 
-    desactivo=0
+    desactivo = 0
 
     if (linea ~ /System is powering down/)
-        desactivo=1
+        desactivo = 1
 
     if (linea ~ /The system will suspend now/)
-        desactivo=1
+        desactivo = 1
 
     if (linea ~ /PM: suspend entry/)
-        desactivo=1
+        desactivo = 1
 
     if (linea ~ /Performing sleep operation/)
-        desactivo=1
+        desactivo = 1
 
     if (linea ~ /Powering off/)
-        desactivo=1
+        desactivo = 1
 
     if (linea ~ /hibernate/)
-        desactivo=1
+        desactivo = 1
 
-    if (desactivo==1)
-        fin[fecha]=hora
+    if (desactivo == 1)
+        fin[fecha] = hora
 }
 
-
 END {
-
     hoy = strftime("%Y-%m-%d")
     hora_actual = strftime("%H:%M")
 
-    lunes_actual=semana_lunes(hoy)
+    lunes_actual = semana_lunes(hoy)
 
-    # Restar 7 días (7 * 86400 segundos) para ir exactamente a la semana anterior
     ts_lunes_anterior = fecha_a_timestamp(lunes_actual) - (7 * 86400)
     lunes_anterior = timestamp_a_fecha(ts_lunes_anterior)
 
     imprimir_semana("SEMANA ANTERIOR", lunes_anterior, 2)
-
     imprimir_semana("SEMANA ACTUAL", lunes_actual, 1)
 }
