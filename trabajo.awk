@@ -25,6 +25,15 @@ function sumar7hs(hora) {
 
     return sprintf("%02d:%02d", int(m/60), m%60)
 }
+function sumar7hsYDeuda(hora, deuda) {
+    split(hora, a, ":")
+    m = a[1]*60 + a[2] + 420 + deuda
+
+    while (m >= 1440)
+        m -= 1440
+
+    return sprintf("%02d:%02d", int(m/60), m%60)
+}
 
 function nombre_dia(n) {
     if (n==1) return "Lunes"
@@ -62,9 +71,8 @@ function semana_lunes(fecha) {
 function imprimir_semana(titulo, lunes, cual) {
 
     print ""
-    print titulo
-    print ""
-
+    printf "%s \n",titulo
+    
     fecha = lunes
     total = 0
     deuda_semanal = 0
@@ -86,12 +94,12 @@ function imprimir_semana(titulo, lunes, cual) {
 
             total += tiempo
 
-            printf "%-9s %s: Inicio: %s  Fin esperado: %s  Total Diario: %s\n",
+            printf "%-9s %s: Inicio: %s  Fin jornada: %s  Fin jornada con deuda: %s\n",
                 dia,
                 fecha,
                 inicio[fecha],
                 sumar7hs(inicio[fecha]),
-                formato(tiempo)
+                sumar7hsYDeuda(inicio[fecha], deuda_semanal)
         }
         else if ((fecha in inicio) && (fecha in fin)) {
             # Día pasado finalizado
@@ -143,8 +151,11 @@ function imprimir_semana(titulo, lunes, cual) {
     if (cual==2)
         total_anterior = total
 
-    printf "\nTOTAL SEMANAL: %s / 35:00 hs\n", formato(total)
-    printf "DEUDA DE HORAS SEMANAL: %s\n", formato(deuda_semanal)
+    if (deuda_semanal >= 0) {
+        printf "DEUDA: %s \n", formato(deuda_semanal)
+    } else {
+        printf "HABER: %s \n", formato(-deuda_semanal)
+    }
 }
 
 {
@@ -204,7 +215,7 @@ END {
     ts_lunes_anterior = fecha_a_timestamp(lunes_actual) - (7 * 86400)
     lunes_anterior = timestamp_a_fecha(ts_lunes_anterior)
 
-    print "Recordá dejar tus buenos días acá: https://mail.google.com/mail/u/0/#chat/home"
+    print "\nRECORDÁ ESCRIBIR \"BUEN DÍA\": https://mail.google.com/mail/u/0/#chat/home"
     
     imprimir_semana("SEMANA ANTERIOR", lunes_anterior, 2)
     imprimir_semana("SEMANA ACTUAL", lunes_actual, 1)
