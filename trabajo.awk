@@ -204,8 +204,8 @@ END {
     ts_lunes_anterior = fecha_a_timestamp(lunes_actual) - (7 * 86400)
     lunes_anterior = timestamp_a_fecha(ts_lunes_anterior)
 
-    sprintf("Recordá dejar tus buenos días acá: https://mail.google.com/mail/u/0/#chat/home")
-
+    print "Recordá dejar tus buenos días acá: https://mail.google.com/mail/u/0/#chat/home"
+    
     imprimir_semana("SEMANA ANTERIOR", lunes_anterior, 2)
     imprimir_semana("SEMANA ACTUAL", lunes_actual, 1)
 }
