@@ -25,6 +25,7 @@ function sumar7hs(hora) {
 
     return sprintf("%02d:%02d", int(m/60), m%60)
 }
+
 function sumar7hsYDeuda(hora, deuda) {
     split(hora, a, ":")
     m = a[1]*60 + a[2] + 420 + deuda
@@ -71,7 +72,7 @@ function semana_lunes(fecha) {
 function imprimir_semana(titulo, lunes, cual) {
 
     print ""
-    printf "%s \n",titulo
+    printf "%s \n", titulo
     
     fecha = lunes
     total = 0
@@ -94,7 +95,7 @@ function imprimir_semana(titulo, lunes, cual) {
 
             total += tiempo
 
-            printf "%-9s %s: Inicio: %s  Fin jornada: %s  Fin jornada con deuda: %s\n",
+            printf "%-9s %s: Inicio: %s  Fin jornada: %s  Fin jornada con deuda/haber: %s\n",
                 dia,
                 fecha,
                 inicio[fecha],
@@ -110,13 +111,16 @@ function imprimir_semana(titulo, lunes, cual) {
             
             cadena_saldo = ""
             if (fecha < hoy) {
-                deuda_dia = 420 - tiempo
-                deuda_semanal += deuda_dia  # Suma si faltaron horas, resta si hubo haber (horas extra)
+                # Solo calcula deuda/haber si efectivamente hubo horas trabajadas en el día (> 0 hs)
+                if (tiempo > 0) {
+                    deuda_dia = 420 - tiempo
+                    deuda_semanal += deuda_dia
 
-                if (deuda_dia > 0) {
-                    cadena_saldo = sprintf("  Deuda diaria: %s", formato(deuda_dia))
-                } else if (deuda_dia < 0) {
-                    cadena_saldo = sprintf("  Haber diario: %s", formato(-deuda_dia))
+                    if (deuda_dia > 0) {
+                        cadena_saldo = sprintf("  Deuda diaria: %s", formato(deuda_dia))
+                    } else if (deuda_dia < 0) {
+                        cadena_saldo = sprintf("  Haber diario: %s", formato(-deuda_dia))
+                    }
                 }
             }
 
@@ -129,17 +133,10 @@ function imprimir_semana(titulo, lunes, cual) {
                 cadena_saldo
         }
         else {
-            # Día pasado sin registro
-            cadena_saldo = ""
-            if (fecha < hoy) {
-                deuda_semanal += 420
-                cadena_saldo = sprintf("  Deuda diaria: %s", formato(420))
-            }
-
-            printf "%-9s %s: Sin registro Total Diario: 00:00%s\n",
+            # Día pasado sin registro (0hs trabajadas): NO suma 7hs de deuda a la semana
+            printf "%-9s %s: Sin registro Total Diario: 00:00\n",
                 dia,
-                fecha,
-                cadena_saldo
+                fecha
         }
 
         fecha = siguiente_fecha(fecha)

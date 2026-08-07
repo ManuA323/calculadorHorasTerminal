@@ -22,6 +22,4 @@ sudo chmod +x /usr/local/bin/horas
 echo
 echo "Instalacion completa."
 echo
-echo "Ejecutar:"
-echo
-echo "    horas"
+echo "Ejecuta el comando \"horas\" para calcular tus horas de trabajo."
