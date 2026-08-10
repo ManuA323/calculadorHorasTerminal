@@ -162,7 +162,11 @@ function imprimir_semana(titulo, lunes, cual) {
 
     activo = 0
 
+    # Detección de Inicio de sesión (Soporta GDM, Systemd estándar y Wake up)
     if (linea ~ /New session [0-9]+ of user/)
+        activo = 1
+
+    if (usuario != "" && linea ~ ("gdm-password.*session opened for user " usuario))
         activo = 1
 
     if (linea ~ /Waking up from system sleep/)
@@ -175,13 +179,18 @@ function imprimir_semana(titulo, lunes, cual) {
         activo = 1
 
     if (activo == 1) {
+        # Guarda ÚNICAMENTE la primera hora de inicio detectada en el día
         if (!(fecha in inicio))
             inicio[fecha] = hora
     }
 
     desactivo = 0
 
+    # Detección de Fin de sesión o Apagado/Suspensión
     if (linea ~ /System is powering down/)
+        desactivo = 1
+
+    if (usuario != "" && linea ~ ("gdm-password.*session closed for user " usuario))
         desactivo = 1
 
     if (linea ~ /The system will suspend now/)
