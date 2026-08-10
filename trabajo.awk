@@ -83,13 +83,13 @@ function imprimir_semana(titulo, lunes, cual) {
         dia = nombre_dia(i)
 
         if (fecha > hoy) {
-            # Días futuros: no contabilizan ni generan deuda
+            # Días futuros
             printf "%-9s %s: Sin registro Total Diario: 00:00\n",
                 dia,
                 fecha
         }
         else if (fecha == hoy && (fecha in inicio)) {
-            # Día actual en curso: calcula total acumulado pero NO suma a deuda semanal
+            # Día actual en curso
             tiempo = minutos(hora_actual) - minutos(inicio[fecha])
             if (tiempo < 0) tiempo = 0
 
@@ -102,16 +102,17 @@ function imprimir_semana(titulo, lunes, cual) {
                 sumar7hs(inicio[fecha]),
                 sumar7hsYDeuda(inicio[fecha], deuda_semanal)
         }
-        else if ((fecha in inicio) && (fecha in fin)) {
-            # Día pasado finalizado
-            tiempo = minutos(fin[fecha]) - minutos(inicio[fecha])
+        else if (fecha in inicio) {
+            # Día pasado con registro de inicio (con o sin evento de fin)
+            hora_fin = (fecha in fin) ? fin[fecha] : sumar7hs(inicio[fecha])
+            
+            tiempo = minutos(hora_fin) - minutos(inicio[fecha])
             if (tiempo < 0) tiempo = 0
 
             total += tiempo
             
             cadena_saldo = ""
             if (fecha < hoy) {
-                # Solo calcula deuda/haber si efectivamente hubo horas trabajadas en el día (> 0 hs)
                 if (tiempo > 0) {
                     deuda_dia = 420 - tiempo
                     deuda_semanal += deuda_dia
@@ -124,16 +125,18 @@ function imprimir_semana(titulo, lunes, cual) {
                 }
             }
 
+            texto_fin = (fecha in fin) ? fin[fecha] : (hora_fin " (s/cierre)")
+
             printf "%-9s %s: Inicio: %s  Fin: %s  Total Diario: %s%s\n",
                 dia,
                 fecha,
                 inicio[fecha],
-                fin[fecha],
+                texto_fin,
                 formato(tiempo),
                 cadena_saldo
         }
         else {
-            # Día pasado sin registro (0hs trabajadas): NO suma 7hs de deuda a la semana
+            # Día pasado sin registro de inicio
             printf "%-9s %s: Sin registro Total Diario: 00:00\n",
                 dia,
                 fecha
@@ -162,11 +165,11 @@ function imprimir_semana(titulo, lunes, cual) {
 
     activo = 0
 
-    # Detección de Inicio de sesión (Soporta GDM, Systemd estándar y Wake up)
-    if (linea ~ /New session [0-9]+ of user/)
+    # Coincidencias de inicio de jornada
+    if (linea ~ /New session/ && linea ~ /tempuser/)
         activo = 1
 
-    if (usuario != "" && linea ~ ("gdm-password.*session opened for user " usuario))
+    if (linea ~ /pam_unix\(gdm-password:session\): session opened for user tempuser/)
         activo = 1
 
     if (linea ~ /Waking up from system sleep/)
@@ -179,18 +182,17 @@ function imprimir_semana(titulo, lunes, cual) {
         activo = 1
 
     if (activo == 1) {
-        # Guarda ÚNICAMENTE la primera hora de inicio detectada en el día
         if (!(fecha in inicio))
             inicio[fecha] = hora
     }
 
     desactivo = 0
 
-    # Detección de Fin de sesión o Apagado/Suspensión
+    # Coincidencias de fin de jornada
     if (linea ~ /System is powering down/)
         desactivo = 1
 
-    if (usuario != "" && linea ~ ("gdm-password.*session closed for user " usuario))
+    if (linea ~ /pam_unix\(gdm-password:session\): session closed for user tempuser/)
         desactivo = 1
 
     if (linea ~ /The system will suspend now/)
