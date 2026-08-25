@@ -69,6 +69,15 @@ function semana_lunes(fecha) {
     return strftime("%Y-%m-%d", ts)
 }
 
+function formato_fecha(f) {
+    # Convierte "YYYY-MM-DD" a "DD-MM"
+    # f es de la forma YYYY-MM-DD (posiciones: AAAA-MM-DD)
+    # AAAA = substr(f, 1, 4)
+    # MM   = substr(f, 6, 2)
+    # DD   = substr(f, 9, 2)
+    return substr(f, 9, 2) "-" substr(f, 6, 2)
+}
+
 function imprimir_semana(titulo, lunes, cual) {
 
     print ""
@@ -86,7 +95,7 @@ function imprimir_semana(titulo, lunes, cual) {
             # Días futuros: no contabilizan ni generan deuda
             printf "%-9s %s: Sin registro Total Diario: 00:00\n",
                 dia,
-                fecha
+                formato_fecha(fecha)
         }
         else if (fecha == hoy && (fecha in inicio)) {
             # Día actual en curso: calcula total acumulado pero NO suma a deuda semanal
@@ -97,7 +106,7 @@ function imprimir_semana(titulo, lunes, cual) {
 
             printf "%-9s %s: Inicio: %s  Fin jornada: %s  Fin jornada con deuda/haber: %s\n",
                 dia,
-                fecha,
+                formato_fecha(fecha),
                 inicio[fecha],
                 sumar7hs(inicio[fecha]),
                 sumar7hsYDeuda(inicio[fecha], deuda_semanal)
@@ -126,7 +135,7 @@ function imprimir_semana(titulo, lunes, cual) {
 
             printf "%-9s %s: Inicio: %s  Fin: %s  Total Diario: %s%s\n",
                 dia,
-                fecha,
+                formato_fecha(fecha),
                 inicio[fecha],
                 fin[fecha],
                 formato(tiempo),
@@ -136,7 +145,7 @@ function imprimir_semana(titulo, lunes, cual) {
             # Día pasado sin registro (0hs trabajadas): NO suma 7hs de deuda a la semana
             printf "%-9s %s: Sin registro Total Diario: 00:00\n",
                 dia,
-                fecha
+                formato_fecha(fecha)
         }
 
         fecha = siguiente_fecha(fecha)
@@ -212,8 +221,7 @@ END {
     ts_lunes_anterior = fecha_a_timestamp(lunes_actual) - (7 * 86400)
     lunes_anterior = timestamp_a_fecha(ts_lunes_anterior)
 
-    print "\nRECORDÁ ESCRIBIR \"BUEN DÍA\": https://mail.google.com/mail/u/0/#chat/home"
-    
     imprimir_semana("SEMANA ANTERIOR", lunes_anterior, 2)
     imprimir_semana("SEMANA ACTUAL", lunes_actual, 1)
+    print "\nRECORDÁ ESCRIBIR \"BUEN DÍA\": https://mail.google.com/mail/u/0/#chat/home"
 }
