@@ -29,7 +29,11 @@ sudo chmod +x /usr/local/lib/trabajo.awk
 sudo curl -fsSL "$REPO/horas" -o /usr/local/bin/horas
 sudo chmod +x /usr/local/bin/horas
 
-# 4. Crear directorio global para los datos con acceso total
+# 4. Descargar desinstalador global
+sudo curl -fsSL "$REPO/uninstall.sh" -o /usr/local/bin/desinstalar-horas
+sudo chmod +x /usr/local/bin/desinstalar-horas
+
+# 5. Crear directorio global para los datos con acceso total
 sudo mkdir -p /var/lib/horas
 sudo chmod 777 /var/lib/horas
 
@@ -37,11 +41,15 @@ if [ -f /var/lib/horas/registro_horas.csv ]; then
     sudo chmod 666 /var/lib/horas/registro_horas.csv
 fi
 
-# 5. Dar permisos para leer journalctl sin sudo
+# 6. Dar permisos para leer journalctl sin sudo
 echo "Configurando permisos de journalctl..."
 sudo usermod -aG systemd-journal "$REAL_USER"
 sudo systemctl restart systemd-journald
 
 echo
 echo "Instalación completa."
-echo "Nota: Si 'horas' te pide sudo la primera vez, abre una nueva terminal para refrescar tus grupos."
+echo "Comandos disponibles:"
+echo " - 'horas' para calcular jornada."
+echo " - 'horas -e' para exportar al escritorio."
+echo " - 'horas -c' para ver el contenido del CSV."
+echo " - 'desinstalar-horas' para remover la herramienta del sistema."
