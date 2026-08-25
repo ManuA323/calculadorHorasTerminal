@@ -1,16 +1,24 @@
 #!/bin/bash
 
 USUARIO=$(whoami)
-DIR_DATOS="$HOME/.local/share/horas"
+DIR_DATOS="/var/lib/horas"
 CSV_FILE="$DIR_DATOS/registro_horas.csv"
 AWK_SCRIPT="/usr/local/lib/trabajo.awk"
 
-mkdir -p "$DIR_DATOS"
-
-# Detectar la ruta del Escritorio/Desktop del usuario
+# Detectar la ruta del Escritorio del usuario que ejecuta el comando
 DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")
 
-# Opción -e: Exportar CSV al Escritorio
+# Opción -cat o -c: Mostrar el contenido del CSV en la terminal
+if [ "$1" = "-cat" ] || [ "$1" = "-c" ]; then
+    if [ -f "$CSV_FILE" ]; then
+        column -s',' -t "$CSV_FILE"
+    else
+        echo "El archivo CSV ($CSV_FILE) aún no existe."
+    fi
+    exit 0
+fi
+
+# Opción -e: Exportar CSV al Escritorio del usuario
 if [ "$1" = "-e" ]; then
     if [ -f "$CSV_FILE" ]; then
         DESTINO="$DESKTOP_DIR/registro_horas.csv"
@@ -24,9 +32,10 @@ fi
 
 if [ ! -f "$CSV_FILE" ]; then
     echo "Fecha,Inicio,Fin" > "$CSV_FILE"
+    chmod 666 "$CSV_FILE"
 fi
 
-# 1. Obtener la última fecha registrada en el CSV (saltando la cabecera)
+# 1. Obtener la última fecha registrada en el CSV
 ULTIMA_FECHA=$(tail -n +2 "$CSV_FILE" | cut -d',' -f1 | sort | tail -n 1)
 
 # 2. Si el CSV está vacío, buscamos desde hace 15 días. Si tiene datos, desde la última fecha.
@@ -36,9 +45,9 @@ else
     FECHA_DESDE="$ULTIMA_FECHA"
 fi
 
-# 3. Consultar journalctl ÚNICAMENTE desde la fecha necesaria hacia adelante
+# 3. Consultar journalctl desde la última fecha registrada
 LOGS_JOURNAL=$(journalctl -o short-iso --no-pager -S "$FECHA_DESDE 00:00:00" \
 | grep -E "New session|System is powering down|Performing sleep operation|System returned from sleep")
 
-# 4. Pasar tanto el CSV como los logs recuperados a AWK
+# 4. Procesar en AWK
 echo "$LOGS_JOURNAL" | awk -v usuario="$USUARIO" -v archivo_csv="$CSV_FILE" -f "$AWK_SCRIPT" "$CSV_FILE" -
