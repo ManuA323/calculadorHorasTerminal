@@ -22,6 +22,10 @@ horas -e
 ```console
 horas -c
 ```
+## Actualizar
+```console
+horas -u
+```
 ## Desinstalar
 ```console
 desinstalar-horas
