@@ -75,11 +75,21 @@ function formato_fecha(f) {
     # AAAA = substr(f, 1, 4)
     # MM   = substr(f, 6, 2)
     # DD   = substr(f, 9, 2)
-    return substr(f, 9, 2) "-" substr(f, 6, 2)
+    return substr(f, 9, 2) "/" substr(f, 6, 2)
+}
+# Retorna "Deuda: HH:MM", "Haber: HH:MM" o "" según el valor
+function obtener_saldo_texto(etiqueta_deuda, etiqueta_haber, valor) {
+    if (valor > 0)  return sprintf("  %s: %s", etiqueta_deuda, formato(valor))
+    if (valor < 0)  return sprintf("  %s: %s", etiqueta_haber, formato(-valor))
+    return ""
 }
 
-function imprimir_semana(titulo, lunes, cual) {
+# Imprime la línea estándar para días vacíos o sin registro
+function imprimir_dia_vacio(dia, fecha) {
+    printf "%-9s %s: Sin registro Total Diario: 00:00\n", dia, formato_fecha(fecha)
+}
 
+function imprimir_semana(titulo, lunes, cual,    i, dia, fecha, total, deuda_semanal, tiempo, deuda_dia, cadena_saldo) {
     print ""
     printf "%s \n", titulo
     
@@ -87,81 +97,46 @@ function imprimir_semana(titulo, lunes, cual) {
     total = 0
     deuda_semanal = 0
 
-    for (i=1; i<=5; i++) {
-
+    for (i = 1; i <= 5; i++) {
         dia = nombre_dia(i)
 
-        if (fecha > hoy) {
-            # Días futuros: no contabilizan ni generan deuda
-            printf "%-9s %s: Sin registro Total Diario: 00:00\n",
-                dia,
-                formato_fecha(fecha)
-        }
-        else if (fecha == hoy && (fecha in inicio)) {
-            # Día actual en curso: calcula total acumulado pero NO suma a deuda semanal
+        if (fecha == hoy && (fecha in inicio)) {
+            # Día actual en curso
             tiempo = minutos(hora_actual) - minutos(inicio[fecha])
-            if (tiempo < 0) tiempo = 0
-
-            total += tiempo
+            total += (tiempo > 0) ? tiempo : 0
 
             printf "%-9s %s: Inicio: %s  Fin jornada: %s  Fin jornada con deuda/haber: %s\n",
-                dia,
-                formato_fecha(fecha),
-                inicio[fecha],
+                dia, formato_fecha(fecha), inicio[fecha],
                 sumar7hs(inicio[fecha]),
                 sumar7hsYDeuda(inicio[fecha], deuda_semanal)
         }
-        else if ((fecha in inicio) && (fecha in fin)) {
+        else if (fecha < hoy && (fecha in inicio) && (fecha in fin)) {
             # Día pasado finalizado
             tiempo = minutos(fin[fecha]) - minutos(inicio[fecha])
-            if (tiempo < 0) tiempo = 0
-
+            tiempo = (tiempo > 0) ? tiempo : 0
             total += tiempo
             
-            cadena_saldo = ""
-            if (fecha < hoy) {
-                # Solo calcula deuda/haber si efectivamente hubo horas trabajadas en el día (> 0 hs)
-                if (tiempo > 0) {
-                    deuda_dia = 420 - tiempo
-                    deuda_semanal += deuda_dia
-
-                    if (deuda_dia > 0) {
-                        cadena_saldo = sprintf("  Deuda diaria: %s", formato(deuda_dia))
-                    } else if (deuda_dia < 0) {
-                        cadena_saldo = sprintf("  Haber diario: %s", formato(-deuda_dia))
-                    }
-                }
-            }
+            deuda_dia = 420 - tiempo
+            deuda_semanal += deuda_dia
+            cadena_saldo = obtener_saldo_texto("Deuda diaria", "Haber diario", deuda_dia)
 
             printf "%-9s %s: Inicio: %s  Fin: %s  Total Diario: %s%s\n",
-                dia,
-                formato_fecha(fecha),
-                inicio[fecha],
-                fin[fecha],
-                formato(tiempo),
-                cadena_saldo
+                dia, formato_fecha(fecha), inicio[fecha], fin[fecha], formato(tiempo), cadena_saldo
         }
         else {
-            # Día pasado sin registro (0hs trabajadas): NO suma 7hs de deuda a la semana
-            printf "%-9s %s: Sin registro Total Diario: 00:00\n",
-                dia,
-                formato_fecha(fecha)
+            # Días futuros o pasados sin registro (unifica los dos casos idénticos)
+            imprimir_dia_vacio(dia, fecha)
         }
 
         fecha = siguiente_fecha(fecha)
     }
 
-    if (cual==1)
-        total_actual = total
+    # Asignación de totales
+    if (cual == 1) total_actual = total
+    if (cual == 2) total_anterior = total
 
-    if (cual==2)
-        total_anterior = total
-
-    if (deuda_semanal >= 0) {
-        printf "DEUDA: %s \n", formato(deuda_semanal)
-    } else {
-        printf "HABER: %s \n", formato(-deuda_semanal)
-    }
+    # Resumen semanal
+    print obtener_saldo_texto("DEUDA", "HABER", deuda_semanal)
 }
 
 {
