@@ -45,21 +45,14 @@ fi
 echo "Configurando permisos de journalctl..."
 sudo usermod -aG systemd-journal "$REAL_USER"
 sudo systemctl restart systemd-journald
-
-echo
 echo "Instalación completa."
 echo "Comandos disponibles:"
-echo " - 'horas' para calcular jornada."
-echo " - 'horas -e' para exportar al escritorio."
-echo " - 'horas -c' para ver el contenido del CSV."
-echo " - 'horas -u' para actualizar la herramienta."
-echo " - 'desinstalar-horas' para remover la herramienta del sistema."
-
+echo " 'horas' para calcular jornada."
+echo " 'horas -e' para exportar al escritorio."
+echo " 'horas -c' para ver el contenido del CSV."
+echo " 'horas -u' para actualizar la herramienta."
+echo " 'desinstalar-horas' para remover la herramienta del sistema."
+echo
 echo "IMPORTANTE: Para activar los permisos sin reiniciar la PC,"
 echo "ejecutá este comando una sola vez en tu terminal:"
-echo
 echo "   newgrp systemd-journal"
-
-# equivalente a newgrp systemd-journal
-# echo "Refrescando sesión de usuario..."
-# exec su -l "$REAL_USER"
