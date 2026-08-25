@@ -24,5 +24,5 @@ horas -c
 ```
 ## Desinstalar
 ```console
-./uninstall.sh
+desinstalar-horas
 ```

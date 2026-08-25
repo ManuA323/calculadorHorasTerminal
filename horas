@@ -4,14 +4,26 @@ USUARIO=$(whoami)
 DIR_DATOS="/var/lib/horas"
 CSV_FILE="$DIR_DATOS/registro_horas.csv"
 AWK_SCRIPT="/usr/local/lib/trabajo.awk"
+REPO_RAW="https://raw.githubusercontent.com/ManuA323/calculadorHorasTerminal/main"
 
-# Detectar dinámicamente la carpeta del escritorio (Español / Inglés / XDG)
-if [ -d "$HOME/Escritorio" ]; then
-    DESKTOP_DIR="$HOME/Escritorio"
-elif [ -d "$HOME/Desktop" ]; then
-    DESKTOP_DIR="$HOME/Desktop"
+# Detectar el usuario real si se usó sudo
+REAL_USER="${SUDO_USER:-$USER}"
+REAL_HOME=$(eval echo "~$REAL_USER")
+
+# Detectar dinámicamente si el escritorio se llama "Escritorio" o "Desktop"
+if [ -d "$REAL_HOME/Escritorio" ]; then
+    DESKTOP_DIR="$REAL_HOME/Escritorio"
+elif [ -d "$REAL_HOME/Desktop" ]; then
+    DESKTOP_DIR="$REAL_HOME/Desktop"
 else
-    DESKTOP_DIR=$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME")
+    DESKTOP_DIR="$REAL_HOME"
+fi
+
+# Opción -u: Actualizar la herramienta ejecutando el instalador
+if [ "$1" = "-u" ]; then
+    echo "Buscando actualizaciones..."
+    curl -fsSL "$REPO_RAW/install.sh" | bash
+    exit 0
 fi
 
 # Opción -cat o -c: Mostrar el contenido del CSV en la terminal
