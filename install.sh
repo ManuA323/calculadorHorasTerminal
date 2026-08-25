@@ -54,3 +54,7 @@ echo " - 'horas -e' para exportar al escritorio."
 echo " - 'horas -c' para ver el contenido del CSV."
 echo " - 'horas -u' para actualizar la herramienta."
 echo " - 'desinstalar-horas' para remover la herramienta del sistema."
+
+# Al final de install.sh:
+echo "Refrescando sesión de usuario..."
+exec su -l "$REAL_USER"
