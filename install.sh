@@ -22,15 +22,24 @@ echo "Instalando calculador para el usuario: $REAL_USER..."
 sudo mkdir -p /usr/local/lib
 
 # 2. Descargar script AWK
-sudo curl -fsSL "$REPO/trabajo.awk" -o /usr/local/lib/trabajo.awk
+sudo curl --retry 5 --retry-delay 2 --retry-max-time 30 --retry-all-errors \
+    -fsSL "$REPO/trabajo.awk" \
+    -o /usr/local/lib/trabajo.awk
+
 sudo chmod +x /usr/local/lib/trabajo.awk
 
 # 3. Descargar ejecutable bash
-sudo curl -fsSL "$REPO/horas" -o /usr/local/bin/horas
+sudo curl --retry 5 --retry-delay 2 --retry-max-time 30 --retry-all-errors \
+    -fsSL "$REPO/horas" \
+    -o /usr/local/bin/horas
+
 sudo chmod +x /usr/local/bin/horas
 
 # 4. Descargar desinstalador global
-sudo curl -fsSL "$REPO/uninstall.sh" -o /usr/local/bin/desinstalar-horas
+sudo curl --retry 5 --retry-delay 2 --retry-max-time 30 --retry-all-errors \
+    -fsSL "$REPO/uninstall.sh" \
+    -o /usr/local/bin/desinstalar-horas
+
 sudo chmod +x /usr/local/bin/desinstalar-horas
 
 # 5. Crear directorio global para los datos con acceso total
@@ -43,8 +52,10 @@ fi
 
 # 6. Dar permisos para leer journalctl sin sudo
 echo "Configurando permisos de journalctl..."
+
 sudo usermod -aG systemd-journal "$REAL_USER"
 sudo systemctl restart systemd-journald
+
 echo "Instalación completa."
 echo "Comandos disponibles:"
 echo " 'horas' para calcular jornada."

@@ -22,7 +22,14 @@ fi
 # Opción -u: Actualizar la herramienta ejecutando el instalador
 if [ "$1" = "-u" ]; then
     echo "Buscando actualizaciones..."
-    curl -fsSL "$REPO_RAW/install.sh" | bash
+
+    if curl --retry 5 --retry-delay 2 --retry-max-time 30 --retry-all-errors -fsSL "$REPO_RAW/install.sh" | bash; then
+        echo "Actualización completada."
+    else
+        echo "Error: no se pudo descargar el instalador."
+        exit 1
+    fi
+
     exit 0
 fi
 
