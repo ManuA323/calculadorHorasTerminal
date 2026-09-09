@@ -116,16 +116,30 @@ function imprimir_dia_vacio(dia, fecha) {
                 inicio[fecha] = hora
         }
 
-        desactivo = 0
-        if (linea ~ /System is powering down/) desactivo = 1
-        if (linea ~ /The system will suspend now/) desactivo = 1
-        if (linea ~ /PM: suspend entry/) desactivo = 1
-        if (linea ~ /Performing sleep operation/) desactivo = 1
-        if (linea ~ /Powering off/) desactivo = 1
-        if (linea ~ /hibernate/) desactivo = 1
 
-        if (desactivo == 1)
+        desactivo = 0
+
+        if (linea ~ /System is powering down/)
+            desactivo = 1
+
+        if (linea ~ /The system will suspend now/)
+            desactivo = 1
+
+        if (linea ~ /PM: suspend entry/)
+            desactivo = 1
+
+        if (linea ~ /Performing sleep operation/)
+            desactivo = 1
+
+        if (linea ~ /Powering off/)
+            desactivo = 1
+
+        if (linea ~ /hibernate/)
+            desactivo = 1
+
+        if (desactivo == 1) {
             fin[fecha] = hora
+        }
     }
 }
 

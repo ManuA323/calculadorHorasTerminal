@@ -67,7 +67,7 @@ fi
 
 # 3. Consultar journalctl desde la última fecha registrada
 LOGS_JOURNAL=$(journalctl -o short-iso --no-pager -S "$FECHA_DESDE 00:00:00" \
-| grep -E "New session|System is powering down|Performing sleep operation|System returned from sleep")
+| grep -E "New session|System is powering down|The system will suspend now|PM: suspend entry|PM: suspend exit|Performing sleep operation|System returned from sleep operation|Waking up from system sleep")
 
 # 4. Procesar en AWK
 echo "$LOGS_JOURNAL" | awk -v usuario="$USUARIO" -v archivo_csv="$CSV_FILE" -f "$AWK_SCRIPT" "$CSV_FILE" -
