@@ -67,8 +67,8 @@ cat > "$AUTOSTART_DIR/horas.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Horas
-Comment=Calculador de horas de trabajo
-Exec=gnome-terminal -- bash -c "horas; exec bash"
+Comment=Calculador de horas en la oficina
+Exec=sh -c 'gnome-terminal -- bash -c "horas; exec bash" & xdg-open "https://mail.google.com/mail/u/0/#chat/home"'
 Terminal=false
 X-GNOME-Autostart-enabled=true
 EOF

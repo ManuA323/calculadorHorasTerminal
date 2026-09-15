@@ -59,9 +59,10 @@ if [ "$1" = "-help" ]; then
     echo "Comandos disponibles:"
     echo ""
     echo " 'horas' para calcular jornada."
-    echo " 'horas -e' para exportar al escritorio."
-    echo " 'horas -c' para ver el contenido del CSV."
+    echo " 'horas -e' para exportar al escritorio en CSV."
+    echo " 'horas -c' para visualizar el contenido del CSV."
     echo " 'horas -u' para actualizar la herramienta."
+    echo " 'horas -help' para ver esta ayuda."
     echo " 'desinstalar-horas' para remover la herramienta del sistema."
     exit 0
 fi
