@@ -1,0 +1,31 @@
+#!/bin/bash
+
+MARCA="/var/lib/horas/ultima_ejecucion"
+NAVEGADOR_FILE="/var/lib/horas/navegador"
+FECHA_HOY=$(date '+%Y-%m-%d')
+URL="https://mail.google.com/mail/u/0/#chat/home"
+
+# Si ya se ejecutó hoy, no hacer nada
+if [ -f "$MARCA" ] && [ "$(cat "$MARCA")" = "$FECHA_HOY" ]; then
+    exit 0
+fi
+
+# Registrar la ejecución de hoy
+mkdir -p /var/lib/horas
+echo "$FECHA_HOY" > "$MARCA"
+
+# Abrir la terminal y ejecutar horas
+gnome-terminal -- bash -c "horas; exec bash" &
+
+# Abrir Gmail con el navegador seleccionado
+if [ -f "$NAVEGADOR_FILE" ]; then
+    NAVEGADOR=$(cat "$NAVEGADOR_FILE")
+
+    if command -v "$NAVEGADOR" >/dev/null 2>&1; then
+        "$NAVEGADOR" "$URL" &
+    else
+        xdg-open "$URL" &
+    fi
+else
+    xdg-open "$URL" &
+fi
