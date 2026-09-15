@@ -56,14 +56,30 @@ echo "Configurando permisos de journalctl..."
 sudo usermod -aG systemd-journal "$REAL_USER"
 sudo systemctl restart systemd-journald
 
+# Configurar ejecución automática de "horas" al iniciar sesión
+REAL_USER="${SUDO_USER:-$USER}"
+REAL_HOME=$(eval echo "~$REAL_USER")
+AUTOSTART_DIR="$REAL_HOME/.config/autostart"
+
+mkdir -p "$AUTOSTART_DIR"
+
+cat > "$AUTOSTART_DIR/horas.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Horas
+Comment=Calculador de horas de trabajo
+Exec=gnome-terminal -- bash -c "horas; exec bash"
+Terminal=false
+X-GNOME-Autostart-enabled=true
+EOF
+
+chown "$REAL_USER:$REAL_USER" "$AUTOSTART_DIR/horas.desktop"
+
+#mensajes de ayuda
+
 echo "Instalación completa."
-echo "Comandos disponibles:"
-echo " 'horas' para calcular jornada."
-echo " 'horas -e' para exportar al escritorio."
-echo " 'horas -c' para ver el contenido del CSV."
-echo " 'horas -u' para actualizar la herramienta."
-echo " 'desinstalar-horas' para remover la herramienta del sistema."
-echo
 echo "IMPORTANTE: Para activar los permisos sin reiniciar la PC,"
 echo "ejecutá este comando una sola vez en tu terminal:"
 echo "   newgrp systemd-journal"
+echo
+echo "ejecutá horas -help para ver los comandos disponibles."

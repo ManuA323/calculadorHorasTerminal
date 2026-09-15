@@ -55,6 +55,17 @@ if [ "$1" = "-e" ]; then
     exit 0
 fi
 
+if [ "$1" = "-help" ]; then
+    echo "Comandos disponibles:"
+    echo ""
+    echo " 'horas' para calcular jornada."
+    echo " 'horas -e' para exportar al escritorio."
+    echo " 'horas -c' para ver el contenido del CSV."
+    echo " 'horas -u' para actualizar la herramienta."
+    echo " 'desinstalar-horas' para remover la herramienta del sistema."
+    exit 0
+fi
+
 # Crear directorio si no existe y asegurar la cabecera del CSV
 mkdir -p "$DIR_DATOS" 2>/dev/null || true
 
