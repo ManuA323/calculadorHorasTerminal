@@ -2,6 +2,8 @@
 
 MARCA="/var/lib/horas/ultima_ejecucion"
 NAVEGADOR_FILE="/var/lib/horas/navegador"
+CONFIG_TERM="/var/lib/horas/auto_terminal"
+CONFIG_NAV="/var/lib/horas/auto_navegador"
 FECHA_HOY=$(date '+%Y-%m-%d')
 URL="https://mail.google.com/mail/u/0/#chat/home"
 
@@ -14,18 +16,22 @@ fi
 mkdir -p /var/lib/horas
 echo "$FECHA_HOY" > "$MARCA"
 
-# Abrir la terminal y ejecutar horas
-gnome-terminal -- bash -c "horas; exec bash" &
+# 1. Ejecutar inicio automático de la terminal si está activado
+if [ -f "$CONFIG_TERM" ] && [ "$(cat "$CONFIG_TERM")" = "1" ]; then
+    gnome-terminal -- bash -c "horas; exec bash" &
+fi
 
-# Abrir Gmail con el navegador seleccionado
-if [ -f "$NAVEGADOR_FILE" ]; then
-    NAVEGADOR=$(cat "$NAVEGADOR_FILE")
+# 2. Abrir Gmail si el inicio automático de navegador está activado
+if [ -f "$CONFIG_NAV" ] && [ "$(cat "$CONFIG_NAV")" = "1" ]; then
+    if [ -f "$NAVEGADOR_FILE" ]; then
+        NAVEGADOR=$(cat "$NAVEGADOR_FILE")
 
-    if command -v "$NAVEGADOR" >/dev/null 2>&1; then
-        "$NAVEGADOR" "$URL" &
+        if command -v "$NAVEGADOR" >/dev/null 2>&1; then
+            "$NAVEGADOR" "$URL" &
+        else
+            xdg-open "$URL" &
+        fi
     else
         xdg-open "$URL" &
     fi
-else
-    xdg-open "$URL" &
 fi

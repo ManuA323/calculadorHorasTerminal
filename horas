@@ -6,18 +6,158 @@ CSV_FILE="$DIR_DATOS/registro_horas.csv"
 AWK_SCRIPT="/usr/local/lib/trabajo.awk"
 REPO_RAW="https://raw.githubusercontent.com/ManuA323/calculadorHorasTerminal/main"
 NAVEGADOR_FILE="$DIR_DATOS/navegador"
+CONFIG_TERM="$DIR_DATOS/auto_terminal"
+CONFIG_NAV="$DIR_DATOS/auto_navegador"
 
 # Detectar el usuario real si se usó sudo
 REAL_USER="${SUDO_USER:-$USER}"
 REAL_HOME=$(eval echo "~$REAL_USER")
 
-# Detectar dinámicamente si el escritorio se llama "Escritorio" o "Desktop"
+# Detectar dinámicamente el Escritorio
 if [ -d "$REAL_HOME/Escritorio" ]; then
     DESKTOP_DIR="$REAL_HOME/Escritorio"
 elif [ -d "$REAL_HOME/Desktop" ]; then
     DESKTOP_DIR="$REAL_HOME/Desktop"
 else
     DESKTOP_DIR="$REAL_HOME"
+fi
+
+# Función auxiliar para gestionar la selección de navegador (usada por -config)
+seleccionar_navegador() {
+    mkdir -p "$DIR_DATOS" 2>/dev/null || true
+
+    echo "Navegadores disponibles:"
+    echo ""
+
+    navegadores=()
+
+    if command -v google-chrome >/dev/null 2>&1; then
+        navegadores+=("Google Chrome|google-chrome")
+    fi
+
+    if command -v firefox >/dev/null 2>&1; then
+        navegadores+=("Mozilla Firefox|firefox")
+    fi
+
+    if command -v chromium >/dev/null 2>&1; then
+        navegadores+=("Chromium|chromium")
+    fi
+
+    if command -v chromium-browser >/dev/null 2>&1; then
+        navegadores+=("Chromium Browser|chromium-browser")
+    fi
+
+    if command -v microsoft-edge >/dev/null 2>&1; then
+        navegadores+=("Microsoft Edge|microsoft-edge")
+    fi
+
+    if [ ${#navegadores[@]} -eq 0 ]; then
+        echo "No se encontraron navegadores compatibles."
+        return 1
+    fi
+
+    for i in "${!navegadores[@]}"; do
+        nombre="${navegadores[$i]%%|*}"
+        echo "$((i+1))) $nombre"
+    done
+
+    echo ""
+
+    read -p "Seleccione un navegador [1-${#navegadores[@]}]: " opcion
+
+    if ! [[ "$opcion" =~ ^[0-9]+$ ]] || [ "$opcion" -lt 1 ] || [ "$opcion" -gt "${#navegadores[@]}" ]; then
+        echo "Selección inválida."
+        return 1
+    fi
+
+    navegador="${navegadores[$((opcion-1))]##*|}"
+    nombre_navegador="${navegadores[$((opcion-1))]%%|*}"
+
+    echo "$navegador" > "$NAVEGADOR_FILE"
+
+    echo ""
+    echo "Navegador seleccionado: $nombre_navegador"
+}
+
+# Opción -config: Interfaz de configuración interactiva
+if [ "$1" = "-config" ]; then
+    mkdir -p "$DIR_DATOS" 2>/dev/null || true
+
+    while true; do
+        # Determinar estado de la terminal
+        if [ -f "$CONFIG_TERM" ] && [ "$(cat "$CONFIG_TERM")" = "1" ]; then
+            estado_term="Activado"
+        else
+            estado_term="Desactivado"
+        fi
+
+        # Determinar estado del navegador
+        if [ -f "$CONFIG_NAV" ] && [ "$(cat "$CONFIG_NAV")" = "1" ]; then
+            estado_nav="Activado"
+        else
+            estado_nav="Desactivado"
+        fi
+
+        # Determinar navegador actual
+        if [ -f "$NAVEGADOR_FILE" ]; then
+            nav_actual=$(cat "$NAVEGADOR_FILE")
+        else
+            nav_actual="Predeterminado del sistema (xdg-open)"
+        fi
+
+        clear
+        echo "=================================================="
+        echo "            CONFIGURACIÓN DE HORAS"
+        echo "=================================================="
+        echo ""
+        echo " 1) Inicio automático de terminal al iniciar sistema: [$estado_term]"
+        echo " 2) Inicio automático del navegador al iniciar sistema: [$estado_nav]"
+        echo " 3) Navegador seleccionado: [$nav_actual]"
+        echo " 4) Guardar y Salir"
+        echo ""
+        read -p "Seleccione una opción [1-4]: " cfg_opcion
+
+        case $cfg_opcion in
+            1)
+                if [ "$estado_term" = "Activado" ]; then
+                    echo "0" > "$CONFIG_TERM"
+                else
+                    echo "1" > "$CONFIG_TERM"
+                fi
+                ;;
+            2)
+                if [ "$estado_nav" = "Activado" ]; then
+                    echo "0" > "$CONFIG_NAV"
+                else
+                    echo "1" > "$CONFIG_NAV"
+                fi
+                ;;
+            3)
+                echo ""
+                seleccionar_navegador
+                read -p "Presione ENTER para continuar..."
+                ;;
+            4)
+                # Actualizar el autostart para reflejar las configuraciones activas
+                cron_cmd="@reboot /usr/local/bin/iniciar-horas >/dev/null 2>&1"
+                
+                if [ -f "$CONFIG_TERM" ] && [ "$(cat "$CONFIG_TERM")" = "1" ] || \
+                   [ -f "$CONFIG_NAV" ] && [ "$(cat "$CONFIG_NAV")" = "1" ]; then
+                    ( crontab -l 2>/dev/null | grep -v "iniciar-horas" ; echo "$cron_cmd" ) | crontab -
+                else
+                    crontab -l 2>/dev/null | grep -v "iniciar-horas" | crontab -
+                fi
+
+                echo ""
+                echo "Configuración guardada correctamente."
+                exit 0
+                ;;
+            *)
+                echo "Opción inválida."
+                sleep 1
+                ;;
+        esac
+    done
 fi
 
 # Opción -u: Actualizar la herramienta ejecutando el instalador
@@ -56,73 +196,14 @@ if [ "$1" = "-e" ]; then
     exit 0
 fi
 
-# Opción -navegador: Seleccionar navegador para abrir Gmail
-if [ "$1" = "-navegador" ]; then
-    mkdir -p "$DIR_DATOS" 2>/dev/null || true
-
-    echo "Navegadores disponibles:"
-    echo ""
-
-    navegadores=()
-
-    if command -v google-chrome >/dev/null 2>&1; then
-        navegadores+=("Google Chrome|google-chrome")
-    fi
-
-    if command -v firefox >/dev/null 2>&1; then
-        navegadores+=("Mozilla Firefox|firefox")
-    fi
-
-    if command -v chromium >/dev/null 2>&1; then
-        navegadores+=("Chromium|chromium")
-    fi
-
-    if command -v chromium-browser >/dev/null 2>&1; then
-        navegadores+=("Chromium Browser|chromium-browser")
-    fi
-
-    if command -v microsoft-edge >/dev/null 2>&1; then
-        navegadores+=("Microsoft Edge|microsoft-edge")
-    fi
-
-    if [ ${#navegadores[@]} -eq 0 ]; then
-        echo "No se encontraron navegadores compatibles."
-        exit 1
-    fi
-
-    for i in "${!navegadores[@]}"; do
-        nombre="${navegadores[$i]%%|*}"
-        echo "$((i+1))) $nombre"
-    done
-
-    echo ""
-
-    read -p "Seleccione un navegador [1-${#navegadores[@]}]: " opcion
-
-    if ! [[ "$opcion" =~ ^[0-9]+$ ]] || [ "$opcion" -lt 1 ] || [ "$opcion" -gt "${#navegadores[@]}" ]; then
-        echo "Selección inválida."
-        exit 1
-    fi
-
-    navegador="${navegadores[$((opcion-1))]##*|}"
-    nombre_navegador="${navegadores[$((opcion-1))]%%|*}"
-
-    echo "$navegador" > "$NAVEGADOR_FILE"
-
-    echo ""
-    echo "Navegador seleccionado: $nombre_navegador"
-
-    exit 0
-fi
-
 # Opción -help: Mostrar ayuda
 if [ "$1" = "-help" ]; then
     echo "Comandos disponibles:"
     echo ""
     echo " 'horas' para calcular jornada."
+    echo " 'horas -config' para abrir la interfaz de configuración general."
     echo " 'horas -e' para exportar al escritorio en CSV."
     echo " 'horas -c' para visualizar el contenido del CSV."
-    echo " 'horas -navegador' para seleccionar el navegador que abrirá Gmail."
     echo " 'horas -u' para actualizar la herramienta."
     echo " 'horas -help' para ver esta ayuda."
     echo " 'desinstalar-horas' para remover la herramienta del sistema."
