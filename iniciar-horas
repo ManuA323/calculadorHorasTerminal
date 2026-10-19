@@ -7,31 +7,65 @@ CONFIG_NAV="/var/lib/horas/auto_navegador"
 FECHA_HOY=$(date '+%Y-%m-%d')
 URL="https://mail.google.com/mail/u/0/#chat/home"
 
-# Si ya se ejecutó hoy, no hacer nada
+# 1. Si ya se ejecutó exitosamente hoy, salir
 if [ -f "$MARCA" ] && [ "$(cat "$MARCA")" = "$FECHA_HOY" ]; then
     exit 0
 fi
 
-# Registrar la ejecución de hoy
-mkdir -p /var/lib/horas
-echo "$FECHA_HOY" > "$MARCA"
+# 2. Exportar el entorno de la sesión de escritorio (imprescindible para Cron / Autostart)
+export DISPLAY="${DISPLAY:-:0}"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
-# 1. Ejecutar inicio automático de la terminal si está activado
+# 3. Esperar hasta 30 segundos a que la interfaz gráfica (D-Bus / X11) esté completamente cargada
+intentos=0
+while ! xset q >/dev/null 2>&1 && [ -z "$WAYLAND_DISPLAY" ] && [ $intentos -lt 30 ]; do
+    sleep 1
+    ((intentos++))
+done
+
+# Variable de control de éxito
+ejecutado=0
+
+# 4. Inicio automático de la terminal si está activado (valor 1)
 if [ -f "$CONFIG_TERM" ] && [ "$(cat "$CONFIG_TERM")" = "1" ]; then
-    gnome-terminal -- bash -c "horas; exec bash" &
+    if command -v gnome-terminal >/dev/null 2>&1; then
+        gnome-terminal -- bash -c "horas; exec bash" &
+        ejecutado=1
+    elif command -v x-terminal-emulator >/dev/null 2>&1; then
+        x-terminal-emulator -e "bash -c 'horas; exec bash'" &
+        ejecutado=1
+    fi
 fi
 
-# 2. Abrir Gmail si el inicio automático de navegador está activado
+# 5. Abrir el navegador si está activado (valor 1)
 if [ -f "$CONFIG_NAV" ] && [ "$(cat "$CONFIG_NAV")" = "1" ]; then
+    # Pequeña pausa para evitar colisiones con el inicio de la terminal
+    sleep 2
+
     if [ -f "$NAVEGADOR_FILE" ]; then
         NAVEGADOR=$(cat "$NAVEGADOR_FILE")
 
         if command -v "$NAVEGADOR" >/dev/null 2>&1; then
-            "$NAVEGADOR" "$URL" &
+            "$NAVEGADOR" "$URL" >/dev/null 2>&1 &
+            ejecutado=1
         else
-            xdg-open "$URL" &
+            xdg-open "$URL" >/dev/null 2>&1 &
+            ejecutado=1
         fi
     else
-        xdg-open "$URL" &
+        xdg-open "$URL" >/dev/null 2>&1 &
+        ejecutado=1
     fi
+fi
+
+# 6. Marcar la fecha de hoy SOLO si se ejecutó al menos una acción o si ambas estaban desactivadas
+if [ -f "$CONFIG_TERM" ] && [ "$(cat "$CONFIG_TERM")" = "0" ] && \
+   [ -f "$CONFIG_NAV" ] && [ "$(cat "$CONFIG_NAV")" = "0" ]; then
+    # Si ambas están en 0, marcamos para no consumir CPU
+    mkdir -p /var/lib/horas 2>/dev/null || true
+    echo "$FECHA_HOY" > "$MARCA"
+elif [ "$ejecutado" -eq 1 ]; then
+    mkdir -p /var/lib/horas 2>/dev/null || true
+    echo "$FECHA_HOY" > "$MARCA"
 fi
