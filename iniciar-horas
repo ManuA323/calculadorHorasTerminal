@@ -38,25 +38,20 @@ if [ -f "$CONFIG_TERM" ] && [ "$(cat "$CONFIG_TERM")" = "1" ]; then
     fi
 fi
 
-# 5. Abrir el navegador si está activado (valor 1)
-if [ -f "$CONFIG_NAV" ] && [ "$(cat "$CONFIG_NAV")" = "1" ]; then
-    # Pequeña pausa para evitar colisiones con el inicio de la terminal
-    sleep 2
+# En la sección 5 de /usr/local/bin/iniciar-horas:
+if [ -f "$NAVEGADOR_FILE" ]; then
+    NAVEGADOR=$(cat "$NAVEGADOR_FILE")
 
-    if [ -f "$NAVEGADOR_FILE" ]; then
-        NAVEGADOR=$(cat "$NAVEGADOR_FILE")
-
-        if command -v "$NAVEGADOR" >/dev/null 2>&1; then
-            "$NAVEGADOR" "$URL" >/dev/null 2>&1 &
-            ejecutado=1
-        else
-            xdg-open "$URL" >/dev/null 2>&1 &
-            ejecutado=1
-        fi
+    if command -v "$NAVEGADOR" >/dev/null 2>&1; then
+        "$NAVEGADOR" "$URL" >/dev/null 2>&1 &
+        ejecutado=1
     else
         xdg-open "$URL" >/dev/null 2>&1 &
         ejecutado=1
     fi
+else
+    xdg-open "$URL" >/dev/null 2>&1 &
+    ejecutado=1
 fi
 
 # 6. Marcar la fecha de hoy SOLO si se ejecutó al menos una acción o si ambas estaban desactivadas
